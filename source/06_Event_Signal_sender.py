@@ -25,6 +25,7 @@ class MyQMainWindow(QMainWindow):
 
     def buttonClicked(self):
         sender = self.sender()
+        print(sender)
         self.statusBar().showMessage(sender.text() + " has been pressed")
 
 
