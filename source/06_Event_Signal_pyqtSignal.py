@@ -26,7 +26,7 @@ class MyQMainWindow(QMainWindow):
         self.com.closeApp.emit()
 
     def myfunc(self):
-        print('sig ')
+        print('sig')
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
