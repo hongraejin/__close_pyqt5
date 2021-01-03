@@ -1,7 +1,8 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QGridLayout, QGroupBox, QVBoxLayout, QSizePolicy,QProgressBar
-
+from PyQt5.QtWidgets import QWidget, QPushButton, QGridLayout, QGroupBox, QVBoxLayout, QSizePolicy,QProgressBar, QLabel, QMessageBox
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QMenu, qApp
+import glob
+import os
+from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QMenu, qApp, QFileDialog
 from PyQt5.QtCore import QCoreApplication, QBasicTimer
 
 class MyWidget(QWidget):
@@ -11,53 +12,64 @@ class MyWidget(QWidget):
         self.initUI()
 
     def initUI(self):
-
-        self.progressbar= QProgressBar(self)
-        self.progressbar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.progressbar.setMinimumHeight(50)
-        self.progressbar.setMinimumWidth(50)
+        self.createProgressBars()
         self.timer = QBasicTimer()
-        self.progress_value = 0
+        self.classfyFolder = "."
+        self.metFolder = "."
 
         grid = QGridLayout()
         grid.addWidget(self.createClassfyMImage(),0,0)
         grid.addWidget(self.createMetMImage(), 0, 1)
 
-
-        #
-        # self.classfyQPushButton = QPushButton('MACRO 이미지 분류기', self)
-        # self.classfyQPushButton.move(50,50)
-
-
         self.setLayout(grid)
-
         self.setGeometry(200,200,500,250)
         self.show()
+
+    def createProgressBars(self):
+        self.progressbarClassfy= QProgressBar(self)
+        self.progressbarClassfy.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.progressbarClassfy.setMinimumHeight(50)
+        self.progressbarClassfy.setMinimumWidth(50)
+        self.progressbarClassfy_value = 0
+
+
+        self.progressbarMet= QProgressBar(self)
+        self.progressbarMet.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.progressbarMet.setMinimumHeight(50)
+        self.progressbarMet.setMinimumWidth(50)
+        self.progressbarMet_value = 0
+
+        self.progressBars = [self.progressbarClassfy, self.progressbarMet]
+
 
     # 매크로 이미지 분류기
     def createClassfyMImage(self):
         groupbox = QGroupBox('1. MACRO 이미지 분류')
 
-        folderSettingButton = QPushButton("폴더 설정")
+        folderSettingButton = QPushButton("분류폴더 설정")
         folderSettingButton.resize(100,50)
         folderSettingButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         folderSettingButton.setMinimumHeight(50)
         folderSettingButton.setMinimumWidth(50)
+        folderSettingButton.clicked.connect(self.ClassfyFolderSettingButtonClicked)
 
-        startClassfyButton = QPushButton("시작")
+        startClassfyButton = QPushButton("이미지분류 시작")
         startClassfyButton.resize(100,50)
+
         startClassfyButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         startClassfyButton.setMinimumHeight(50)
         startClassfyButton.setMinimumWidth(50)
+        startClassfyButton.clicked.connect(self.buttonClicked)
+
+        self.statusClassfyLabel = QLabel("")
 
         vbox = QVBoxLayout()
-        # vbox.addStretch(1)
         vbox.addWidget(folderSettingButton)
         vbox.addWidget(startClassfyButton)
         vbox.addStretch(1)
-        vbox.addWidget(self.progressbar)
+        vbox.addWidget(self.statusClassfyLabel)
+        vbox.addWidget(self.progressbarClassfy)
         vbox.addStretch(1)
-
 
         groupbox.setLayout(vbox)
 
@@ -67,50 +79,105 @@ class MyWidget(QWidget):
     def createMetMImage(self):
         groupbox = QGroupBox('2. 지름 측정')
 
-        folderSettingButton = QPushButton("폴더 설정")
+        folderSettingButton = QPushButton("매크로폴더 설정")
         folderSettingButton.resize(100,50)
         folderSettingButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         folderSettingButton.setMinimumHeight(50)
         folderSettingButton.setMinimumWidth(50)
+        folderSettingButton.clicked.connect(self.MetFolderSettingButtonClicked)
 
-        startClassfyButton = QPushButton("시작")
+        startClassfyButton = QPushButton("지름측정 시작")
         startClassfyButton.resize(100,50)
         startClassfyButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         startClassfyButton.setMinimumHeight(50)
         startClassfyButton.setMinimumWidth(50)
+        startClassfyButton.clicked.connect(self.buttonClicked)
+
+        self.statusMetLabel = QLabel()
+
 
         vbox = QVBoxLayout()
-        # vbox.addStretch(1)
         vbox.addWidget(folderSettingButton)
         vbox.addWidget(startClassfyButton)
+        vbox.addStretch(1)
+        vbox.addWidget(self.statusMetLabel)
+        vbox.addWidget(self.progressbarMet)
         vbox.addStretch(1)
 
         groupbox.setLayout(vbox)
 
         return groupbox
 
-    def timerEvent(self, QTimerEvent):
-        if self.progress_value >=100:
-            self.timer.stop()
-            self.button.setText('finished')
+    def ClassfyFolderSettingButtonClicked(self):
+
+        path = QFileDialog.getExistingDirectory(self)
+        if path:
+            self.classfyFolder = path
+            statusString = "선택한 폴더 :  \n" + self.classfyFolder
+            self.statusClassfyLabel.setText(statusString)
+            self.progressbarClassfy_value = 0
+            self.progressbarClassfy.setValue(self.progressbarClassfy_value)
+        else:
+            statusString = "폴더 설정을 취소하였습니다"
+            self.statusClassfyLabel.setText(statusString)
+
+    def MetFolderSettingButtonClicked(self):
+
+        path = QFileDialog.getExistingDirectory(self)
+        if path:
+            self.metFolder = path
+            statusString = "선택한 폴더 :  \n"+ self.metFolder
+            self.statusMetLabel.setText(statusString)
+            self.progressbarMet_value = 0
+            self.progressbarMet.setValue(self.progressbarMet_value)
+        else:
+            statusString = "폴더 설정을 취소하였습니다"
+            self.statusMetLabel.setText(statusString)
+
+
+    def buttonClicked(self):
+
+        sender = self.sender()
+        # 이미지분류 버튼
+        if sender.text() == "이미지분류 시작":
+
+            if (not self.classfyFolder) or (self.classfyFolder == "."):
+                QMessageBox.information(self, "폴더 설정", "폴더 설정이 필요합니다")
+
+            else:
+                if self.timer.isActive():
+                    print('진행중')
+                else:
+                    self.timer.start(100,self)
+                    print("스타트")
+
+        # 지름측정 버튼
+        elif sender.text() == "지름측정 시작":
+            if (not self.metFolder) or (self.metFolder == "."):
+                QMessageBox.information(self, "폴더 설정", "폴더 설정이 필요합니다")
+
+            self.progressbarMet_value = 0
+            self.progressbarMet.setValue(self.progressbarMet_value)
             return
 
-        self.progress_value += 1
-        self.progressbar.setValue(self.progress_value)
 
-import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QMenu, qApp
-from PyQt5.QtCore import QCoreApplication
+
+    def timerEvent(self, QTimerEvent):
+        if self.progressbarClassfy_value >=100:
+            self.timer.stop()
+            return
+
+        self.progressbarClassfy_value += 1
+        self.progressbarClassfy.setValue(self.progressbarClassfy_value)
+
 class MyWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initUI()
 
     def initUI(self):
-        # self.statusBar()
-        # self.statusBar().showMessage("Hello StatusBar")
-        statusBar = self.statusBar()
-        statusBar.showMessage("Hello StatusBar")
+        self.statusBar = self.statusBar()
+        self.statusBar.showMessage("문의사항 : hongrae.jin@samsung.com")
 
         menu = self.menuBar()
         menu_file = menu.addMenu('File')
@@ -123,13 +190,13 @@ class MyWindow(QMainWindow):
         file_exit.setStatusTip("Quit")
         file_exit.triggered.connect(QCoreApplication.instance().exit)
 
-        # 세부사항을 모아서 올라감
-        file_new = QMenu("New", self)
-        new_txt = QAction("Text 파일", self)
-        new_py = QAction("Python 파일", self)
-        file_new.addAction(new_txt)
-        file_new.addAction(new_py)
-        menu_file.addMenu(file_new)
+        # # 세부사항을 모아서 올라감
+        # file_new = QMenu("New", self)
+        # new_txt = QAction("Text 파일", self)
+        # new_py = QAction("Python 파일", self)
+        # file_new.addAction(new_txt)
+        # file_new.addAction(new_py)
+        # menu_file.addMenu(file_new)
 
         view_status = QAction("Status 표시줄", self, checkable=True)
         view_status.setChecked(True)
@@ -162,7 +229,6 @@ class MyWindow(QMainWindow):
         print("action", action)
         print('quit', quit)
         if action == quit:
-            # menu 를 띄위ㅓ서 받은 action 의 값이 return 되고, action (quit) 을 선택하면 같아진다.
             qApp.quit()
             print('일치 ')
 
